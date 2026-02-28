@@ -64,6 +64,7 @@ DrawState::DrawState( int s_width, int s_height )
     combining_char_row( 0 ), default_tabs( true ), tabs( s_width ), scrolling_region_top_row( 0 ),
     scrolling_region_bottom_row( height - 1 ), renditions( 0 ), save(), next_print_will_wrap( false ),
     origin_mode( false ), auto_wrap_mode( true ), insert_mode( false ), cursor_visible( true ),
+    cursor_style( CURSOR_STYLE_DEFAULT ), cursor_style_seq( 0 ), cursor_style_events(),
     reverse_video( false ), bracketed_paste( false ), mouse_reporting_mode( MOUSE_REPORTING_NONE ),
     mouse_focus_event( false ), mouse_alternate_scroll( false ), mouse_encoding_mode( MOUSE_ENCODING_DEFAULT ),
     application_mode_cursor_keys( false )
@@ -382,11 +383,24 @@ void Framebuffer::reset( void )
   /* do not reset bell_count */
 }
 
+void DrawState::set_cursor_style( CursorStyle style )
+{
+  cursor_style = style;
+  cursor_style_seq++;
+  cursor_style_events.push_back( CursorStyleEvent{ cursor_style_seq, style } );
+
+  static const size_t cursor_style_event_limit = 64;
+  while ( cursor_style_events.size() > cursor_style_event_limit ) {
+    cursor_style_events.pop_front();
+  }
+}
+
 void Framebuffer::soft_reset( void )
 {
   ds.insert_mode = false;
   ds.origin_mode = false;
   ds.cursor_visible = true; /* per xterm and gnome-terminal */
+  ds.set_cursor_style( DrawState::CURSOR_STYLE_DEFAULT );
   ds.application_mode_cursor_keys = false;
   ds.set_scrolling_region( 0, ds.get_height() - 1 );
   ds.add_rendition( 0 );

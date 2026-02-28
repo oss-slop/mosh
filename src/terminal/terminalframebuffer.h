@@ -280,6 +280,23 @@ public:
   bool auto_wrap_mode;
   bool insert_mode;
   bool cursor_visible;
+  enum CursorStyle
+  {
+    CURSOR_STYLE_DEFAULT = 0,
+    CURSOR_STYLE_BLINKING_BLOCK = 1,
+    CURSOR_STYLE_STEADY_BLOCK = 2,
+    CURSOR_STYLE_BLINKING_UNDERLINE = 3,
+    CURSOR_STYLE_STEADY_UNDERLINE = 4,
+    CURSOR_STYLE_BLINKING_BAR = 5,
+    CURSOR_STYLE_STEADY_BAR = 6
+  } cursor_style;
+  struct CursorStyleEvent
+  {
+    uint64_t seq;
+    CursorStyle style;
+  };
+  uint64_t cursor_style_seq;
+  std::deque<CursorStyleEvent> cursor_style_events;
   bool reverse_video;
   bool bracketed_paste;
 
@@ -335,6 +352,7 @@ public:
   void set_foreground_color( int x ) { renditions.set_foreground_color( x ); }
   void set_background_color( int x ) { renditions.set_background_color( x ); }
   void add_rendition( color_type x ) { renditions.set_rendition( x ); }
+  void set_cursor_style( CursorStyle style );
   const Renditions& get_renditions( void ) const { return renditions; }
   Renditions& get_renditions( void ) { return renditions; }
   int get_background_rendition( void ) const { return renditions.get_background_rendition(); }
@@ -352,7 +370,9 @@ public:
     /* only compare fields that affect display */
     return ( width == x.width ) && ( height == x.height ) && ( cursor_col == x.cursor_col )
            && ( cursor_row == x.cursor_row ) && ( cursor_visible == x.cursor_visible )
-           && ( reverse_video == x.reverse_video ) && ( renditions == x.renditions )
+           && ( cursor_style == x.cursor_style ) && ( cursor_style_seq == x.cursor_style_seq )
+           && ( reverse_video == x.reverse_video )
+           && ( renditions == x.renditions )
            && ( bracketed_paste == x.bracketed_paste ) && ( mouse_reporting_mode == x.mouse_reporting_mode )
            && ( mouse_focus_event == x.mouse_focus_event ) && ( mouse_alternate_scroll == x.mouse_alternate_scroll )
            && ( mouse_encoding_mode == x.mouse_encoding_mode );

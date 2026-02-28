@@ -267,6 +267,24 @@ std::string Display::new_frame( bool initialized, const Framebuffer& last, const
     }
   }
 
+  /* has cursor style changed? */
+  if ( f.ds.cursor_style_seq != frame.last_frame.ds.cursor_style_seq ) {
+    bool emitted = false;
+    for ( std::deque<DrawState::CursorStyleEvent>::const_iterator it = f.ds.cursor_style_events.begin();
+          it != f.ds.cursor_style_events.end();
+          it++ ) {
+      if ( it->seq > frame.last_frame.ds.cursor_style_seq ) {
+        snprintf( tmp, sizeof( tmp ), "\033[%d q", it->style );
+        frame.append( tmp );
+        emitted = true;
+      }
+    }
+    if ( !emitted ) {
+      snprintf( tmp, sizeof( tmp ), "\033[%d q", f.ds.cursor_style );
+      frame.append( tmp );
+    }
+  }
+
   /* have renditions changed? */
   frame.update_rendition( f.ds.get_renditions(), !initialized );
 

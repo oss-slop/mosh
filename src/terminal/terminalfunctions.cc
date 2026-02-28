@@ -588,6 +588,21 @@ static void CSI_DECSTR( Framebuffer* fb, Dispatcher* dispatch __attribute( ( unu
 
 static Function func_CSI_DECSTR( CSI, "!p", CSI_DECSTR );
 
+/* set cursor style */
+static void CSI_DECSCUSR( Framebuffer* fb, Dispatcher* dispatch )
+{
+  int cursor_style = dispatch->getparam( 0, 0 );
+  if ( cursor_style < static_cast<int>( DrawState::CURSOR_STYLE_DEFAULT )
+       || cursor_style > static_cast<int>( DrawState::CURSOR_STYLE_STEADY_BAR ) ) {
+    return;
+  }
+
+  fb->ds.set_cursor_style( static_cast<DrawState::CursorStyle>( cursor_style ) );
+}
+
+/* DECSCUSR preserves wrap state */
+static Function func_CSI_DECSCUSR( CSI, " q", CSI_DECSCUSR, false );
+
 /* xterm uses an Operating System Command to set the window title */
 void Dispatcher::OSC_dispatch( const Parser::OSC_End* act __attribute( ( unused ) ), Framebuffer* fb )
 {
