@@ -549,6 +549,43 @@ void Renditions::set_background_color( int num )
   }
 }
 
+namespace
+{
+void append_sgr_param( std::string& params, const char* param )
+{
+  if ( !params.empty() ) {
+    params.push_back( ';' );
+  }
+  params.append( param );
+}
+
+void append_color_sgr_param( std::string& params, unsigned int color, bool foreground )
+{
+  char col[64];
+
+  if ( color == 0 ) {
+    append_sgr_param( params, foreground ? "39" : "49" );
+    return;
+  }
+
+  if ( Renditions::is_true_color( color ) ) {
+    snprintf( col,
+              sizeof( col ),
+              foreground ? "38;2;%d;%d;%d" : "48;2;%d;%d;%d",
+              ( color >> 16 ) & 0xff,
+              ( color >> 8 ) & 0xff,
+              color & 0xff );
+  } else if ( ( foreground && color > 37 ) || ( !foreground && color > 47 ) ) {
+    snprintf( col, sizeof( col ), foreground ? "38;5;%d" : "48;5;%d", color - ( foreground ? 30 : 40 ) );
+  } else {
+    int c = color;
+    snprintf( col, sizeof( col ), "%d", c );
+  }
+
+  append_sgr_param( params, col );
+}
+}
+
 std::string Renditions::sgr( void ) const
 {
   std::string ret;
@@ -614,6 +651,78 @@ std::string Renditions::sgr( void ) const
   }
   ret.append( "m" );
 
+  return ret;
+}
+
+std::string Renditions::sgr( const Renditions& previous ) const
+{
+  std::string params;
+
+  const bool prev_bold = previous.get_attribute( bold );
+  const bool prev_faint = previous.get_attribute( faint );
+  const bool next_bold = get_attribute( bold );
+  const bool next_faint = get_attribute( faint );
+
+  if ( prev_bold != next_bold || prev_faint != next_faint ) {
+    const bool needs_clear_22 = ( prev_bold && !next_bold ) || ( prev_faint && !next_faint );
+    if ( needs_clear_22 ) {
+      append_sgr_param( params, "22" );
+      if ( next_bold ) {
+        append_sgr_param( params, "1" );
+      }
+      if ( next_faint ) {
+        append_sgr_param( params, "2" );
+      }
+    } else {
+      if ( !prev_bold && next_bold ) {
+        append_sgr_param( params, "1" );
+      }
+      if ( !prev_faint && next_faint ) {
+        append_sgr_param( params, "2" );
+      }
+    }
+  }
+
+  struct attribute_transition
+  {
+    attribute_type attr;
+    const char* set_param;
+    const char* clear_param;
+  };
+
+  static const attribute_transition attrs[] = {
+    { italic, "3", "23" },
+    { underlined, "4", "24" },
+    { blink, "5", "25" },
+    { inverse, "7", "27" },
+    { invisible, "8", "28" },
+  };
+
+  for ( const auto& transition : attrs ) {
+    const bool from = previous.get_attribute( transition.attr );
+    const bool to = get_attribute( transition.attr );
+    if ( from && !to ) {
+      append_sgr_param( params, transition.clear_param );
+    } else if ( !from && to ) {
+      append_sgr_param( params, transition.set_param );
+    }
+  }
+
+  if ( foreground_color != previous.foreground_color ) {
+    append_color_sgr_param( params, foreground_color, true );
+  }
+  if ( background_color != previous.background_color ) {
+    append_color_sgr_param( params, background_color, false );
+  }
+
+  if ( params.empty() ) {
+    return "";
+  }
+
+  std::string ret;
+  ret.append( "\033[" );
+  ret.append( params );
+  ret.push_back( 'm' );
   return ret;
 }
 

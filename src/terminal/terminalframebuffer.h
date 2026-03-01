@@ -74,6 +74,7 @@ public:
   void set_background_color( int num );
   void set_rendition( color_type num );
   std::string sgr( void ) const;
+  std::string sgr( const Renditions& previous ) const;
 
   static unsigned int make_true_color( unsigned int r, unsigned int g, unsigned int b )
   {
@@ -82,7 +83,6 @@ public:
 
   static bool is_true_color( unsigned int color ) { return ( color & true_color_mask ) != 0; }
 
-  // unsigned int get_foreground_rendition() const { return foreground_color; }
   unsigned int get_background_rendition() const { return background_color; }
 
   bool operator==( const Renditions& x ) const

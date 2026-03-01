@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# shellcheck source=e2e-test-subrs
+. "$(dirname "$0")/e2e-test-subrs"
+PATH=$PATH:.:$srcdir
+
+if [ $# -eq 0 ]; then
+    e2e-test "$0" baseline direct post
+    exit
+fi
+
+if [ $# -ne 1 ]; then
+    fail "bad arguments %s\n" "$@"
+fi
+
+baseline()
+{
+    printf '\033[H\033[J'
+    printf '\033[38;5;244mA\033[2mB\033[22mC\033[m\n'
+    printf '\033[38;2;10;20;30mX\033[2mY\033[m\n'
+}
+
+post()
+{
+    export LANG=C
+    export LC_ALL=C
+
+    esc=$(printf '\033')
+    cap_base="$(basename "$0").d/baseline.capture"
+    cap_direct="$(basename "$0").d/direct.capture"
+
+    # Sanity: direct path must contain the composed transitions.
+    if ! grep -Eq "${esc}\\[38;5;244mA${esc}\\[2mB" "$cap_direct"; then
+        exit 99
+    fi
+    if ! grep -Eq "${esc}\\[38;2;10;20;30mX${esc}\\[2mY" "$cap_direct"; then
+        exit 99
+    fi
+
+    # Regression condition: adding faint must not reset prior foreground color.
+    if grep -Eq "${esc}\\[38;5;244mA${esc}\\[0;2mB" "$cap_base"; then
+        exit 1
+    fi
+    if ! grep -Eq "${esc}\\[38;5;244mA${esc}\\[(2|2;38;5;244|38;5;244;2)mB" "$cap_base"; then
+        exit 1
+    fi
+
+    # Same check for truecolor foreground.
+    if grep -Eq "${esc}\\[38;2;10;20;30mX${esc}\\[0;2mY" "$cap_base"; then
+        exit 1
+    fi
+    if ! grep -Eq "${esc}\\[38;2;10;20;30mX${esc}\\[(2|2;38;2;10;20;30|38;2;10;20;30;2)mY" "$cap_base"; then
+        exit 1
+    fi
+
+    exit 0
+}
+
+case $1 in
+    baseline|direct)
+        baseline;;
+    post)
+        post;;
+    *)
+        fail "unknown test argument %s\n" "$1";;
+esac

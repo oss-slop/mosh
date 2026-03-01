@@ -30,6 +30,7 @@
     also delete it here.
 */
 
+#include <cassert>
 #include <cstdio>
 
 #include "src/terminal/terminalframebuffer.h"
@@ -528,7 +529,13 @@ void FrameState::update_rendition( const Renditions& r, bool force )
 {
   if ( force || !( current_rendition == r ) ) {
     /* print renditions */
-    append_string( r.sgr() );
+    if ( force ) {
+      append_string( r.sgr() );
+    } else {
+      std::string delta = r.sgr( current_rendition );
+      assert( !delta.empty() );
+      append_string( delta );
+    }
     current_rendition = r;
   }
 }

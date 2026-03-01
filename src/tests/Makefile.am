@@ -23,7 +23,7 @@ displaytests = \
 	emulation-attributes-bce.test \
 	emulation-back-tab.test \
 	emulation-cursor-motion.test \
-	emulation-faint.test \
+	emulation-sgr-transitions.test \
 	emulation-multiline-scroll.test \
 	emulation-scroll.test \
 	emulation-wrap-across-frames.test \
