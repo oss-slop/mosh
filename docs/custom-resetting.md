@@ -20,6 +20,83 @@ printf '\e[2mexplain this codebase\e[0m\n'
 printf '\e[38;5;244mexplain this codebase\e[0m\n'
 ```
 
+## Test Matrix Snapshot (2026-03-01)
+
+Observed user-level matrix so far:
+
+1. Primitive faint test
+```sh
+printf '\e[2mexplain this codebase\e[0m\n'
+```
+- SSH: appears gray/faint as expected.
+- mosh: appears close to white (problem case).
+
+2. Primitive explicit gray test
+```sh
+printf '\e[38;5;244mexplain this codebase\e[0m\n'
+```
+- SSH: gray.
+- mosh: gray.
+
+3. Equivalent-style spellings test
+```sh
+printf '\e[38;5;244mgray244\e[0m  \e[90mbright-black\e[0m  \e[2mfaint\e[0m\n'
+printf '\e[38;5;244mgray244\e[39m  \e[38;5;8mbright-black\e[39m  \e[2mfaint\e[22m\n'
+```
+- User report: these two render identically.
+- Interpretation: `0` vs `39` and `0` vs `22` spelling alone does not explain the visual mismatch.
+
+4. Colon-form vs semicolon-form color test
+```sh
+printf '\e[38:5:244mCOLON-244\e[0m  \e[38;5;244mSEMI-244\e[0m\n'
+printf '\e[38:2::180:180:180mCOLON-RGB\e[0m  \e[38;2;180;180;180mSEMI-RGB\e[0m\n'
+```
+- User report: SSH and mosh looked identical.
+- Lab note: in raw non-tmux mosh capture, colon-form colors are dropped while semicolon-form are preserved. This can be masked when running inside tmux (tmux may normalize before mosh sees output).
+
+Current conclusion from matrix:
+- The issue is not explained by simple reset spelling differences alone.
+- The mismatch is likely context-dependent (full TUI render path and/or inherited style state), not a single isolated SGR primitive.
+
+5. Intensity-only vs explicit-color+intensity (latest user check)
+```sh
+printf '\e[22m\e[2mfaint\e[0m\n'
+printf '\e[2mfaint\e[0m\n'
+printf '\e[38;5;244m\e[2mfaint-gray\e[0m\n'
+```
+- User report over mosh:
+  - first two (`faint`) appear white,
+  - `faint-gray` appears light gray.
+- User report over SSH:
+  - all three appear light gray.
+
+Interpretation:
+- `SGR 2` is not universally ignored in mosh path (it works when foreground is explicit gray).
+- Remaining divergence appears tied to `dim + default-foreground` context rather than `dim` itself.
+
+## Byte-Level Parity Notes
+
+Additional capture on 2026-03-01 for `mosh -> tmux -> shell printf` showed:
+
+- Payload rendered by mosh includes:
+  - `\e[38;5;244mgray244\e[39m`
+  - `\e[38;5;8mbright-black\e[39m`
+  - `\e[2mfaint`
+- Immediately after payload, tmux status line update emits:
+  - `\e[22;30;42m...`
+
+Interpretation:
+- Faint is not missing from the byte stream in this layered path.
+- Any remaining visual mismatch is likely due to contextual rendering interaction
+  (timing/order/frame update behavior) rather than complete loss of `SGR 2`.
+
+### Non-tmux Lab Repro (Important)
+
+In raw non-tmux mosh capture, colon-form SGR color (`38:...` / `48:...`) is not
+preserved, while semicolon-form (`38;...` / `48;...`) is preserved.
+This is a separate parser-coverage issue and may or may not be the user's active
+symptom depending on whether tmux normalization is in the path.
+
 ## Debugging Timeline (Objective)
 
 1. Confirmed that OpenSSH preserves emitted bytes from applications.
