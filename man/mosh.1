@@ -155,6 +155,14 @@ if its value is 'yes'.
 Synonym for \-\-predict\-overwrite
 
 .TP
+.B \-\-client\-network\-timeout=\fISECONDS\fP
+Set the timeout used by \fBmosh-client\fP before showing the
+connection warning bar ("Last contact ... ago."). The default is 2
+seconds.
+
+This option sets \fBMOSH_CLIENT_NETWORK_TMOUT\fP for the client process.
+
+.TP
 .B \-\-family=inet
 Only use IPv4 for the SSH connection and Mosh session.
 
@@ -309,6 +317,11 @@ control character, not with a printable representation such as "^B".
 .B MOSH_PREDICTION_DISPLAY
 Controls local echo as described above.  The command-line flag
 overrides this variable.
+
+.TP
+.B MOSH_CLIENT_NETWORK_TMOUT
+Sets the warning timeout in seconds before \fBmosh-client\fP displays
+"Last contact ... ago." This variable must be a positive integer.
 
 .TP
 .B MOSH_TITLE_NOPREFIX

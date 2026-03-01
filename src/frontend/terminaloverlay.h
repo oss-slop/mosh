@@ -148,15 +148,18 @@ public:
 class NotificationEngine
 {
 private:
+  static const uint64_t SERVER_LATE_TIMEOUT_DEFAULT = 2000; /* ms before "Last contact ..." warning */
+
   uint64_t last_word_from_server;
   uint64_t last_acked_state;
+  uint64_t server_late_timeout;
   std::string escape_key_string;
   std::wstring message;
   bool message_is_network_error;
   uint64_t message_expiration;
   bool show_quit_keystroke;
 
-  bool server_late( uint64_t ts ) const { return ( ts - last_word_from_server ) > 6500; }
+  bool server_late( uint64_t ts ) const { return ( ts - last_word_from_server ) > server_late_timeout; }
   bool reply_late( uint64_t ts ) const { return ( ts - last_acked_state ) > 10000; }
   bool need_countup( uint64_t ts ) const { return server_late( ts ) || reply_late( ts ); }
 

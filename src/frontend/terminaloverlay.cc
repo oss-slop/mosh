@@ -31,7 +31,9 @@
 */
 
 #include <algorithm>
+#include <cerrno>
 #include <climits>
+#include <cstdlib>
 #include <cwchar>
 #include <list>
 #include <typeinfo>
@@ -153,9 +155,22 @@ void ConditionalCursorMove::apply( Framebuffer& fb, uint64_t confirmed_epoch ) c
 }
 
 NotificationEngine::NotificationEngine()
-  : last_word_from_server( timestamp() ), last_acked_state( timestamp() ), escape_key_string(), message(),
-    message_is_network_error( false ), message_expiration( -1 ), show_quit_keystroke( true )
-{}
+  : last_word_from_server( timestamp() ), last_acked_state( timestamp() ),
+    server_late_timeout( SERVER_LATE_TIMEOUT_DEFAULT ), escape_key_string(), message(), message_is_network_error( false ),
+    message_expiration( -1 ), show_quit_keystroke( true )
+{
+  const char* timeout_envar = getenv( "MOSH_CLIENT_NETWORK_TMOUT" );
+  if ( timeout_envar && *timeout_envar ) {
+    errno = 0;
+    char* endptr = NULL;
+    long timeout_seconds = strtol( timeout_envar, &endptr, 10 );
+    if ( *endptr != '\0' || timeout_seconds <= 0 || errno == ERANGE ) {
+      fputs( "MOSH_CLIENT_NETWORK_TMOUT not a valid positive integer, ignoring\n", stderr );
+    } else {
+      server_late_timeout = static_cast<uint64_t>( timeout_seconds ) * 1000;
+    }
+  }
+}
 
 static std::string human_readable_duration( int num_seconds, const std::string& seconds_abbr )
 {

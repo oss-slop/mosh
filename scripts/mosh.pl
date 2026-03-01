@@ -67,6 +67,7 @@ my $server = 'mosh-server';
 my $predict = undef;
 
 my $overwrite = 0;
+my $client_network_timeout = undef;
 
 my $bind_ip = undef;
 
@@ -101,6 +102,9 @@ qq{Usage: $0 [options] [--] [user@]host [command...]
         --predict=experimental  aggressively echo even when incorrect
 
 -o      --predict-overwrite     prediction overwrites instead of inserting
+        --client-network-timeout=SECONDS
+                                warning timeout for lost server contact
+                                (default: 2)
 
 -4      --family=inet        use IPv4 only
 -6      --family=inet6       use IPv6 only
@@ -153,25 +157,26 @@ sub predict_check {
 }
 
 GetOptions( 'client=s' => \$client,
-	    'server=s' => \$server,
-	    'predict=s' => \$predict,
-	    'predict-overwrite|o!' => \$overwrite,
-	    'port=s' => \$port_request,
-	    'a' => sub { $predict = 'always' },
-	    'n' => sub { $predict = 'never' },
-	    'family=s' => \$family,
-	    '4' => sub { $family = 'inet' },
-	    '6' => sub { $family = 'inet6' },
-	    'p=s' => \$port_request,
-	    'ssh=s' => sub { @ssh = shellwords($_[1]); },
-	    'ssh-pty!' => \$ssh_pty,
-	    'init!' => \$term_init,
-	    'local' => \$localhost,
-	    'help' => \$help,
-	    'version' => \$version,
-	    'fake-proxy!' => \my $fake_proxy,
-	    'bind-server=s' => \$bind_ip,
-	    'experimental-remote-ip=s' => \$use_remote_ip) or die $usage;
+            'server=s' => \$server,
+            'predict=s' => \$predict,
+            'predict-overwrite|o!' => \$overwrite,
+            'client-network-timeout=i' => \$client_network_timeout,
+            'port=s' => \$port_request,
+            'a' => sub { $predict = 'always' },
+            'n' => sub { $predict = 'never' },
+            'family=s' => \$family,
+            '4' => sub { $family = 'inet' },
+            '6' => sub { $family = 'inet6' },
+            'p=s' => \$port_request,
+            'ssh=s' => sub { @ssh = shellwords($_[1]); },
+            'ssh-pty!' => \$ssh_pty,
+            'init!' => \$term_init,
+            'local' => \$localhost,
+            'help' => \$help,
+            'version' => \$version,
+            'fake-proxy!' => \my $fake_proxy,
+            'bind-server=s' => \$bind_ip,
+            'experimental-remote-ip=s' => \$use_remote_ip) or die $usage;
 
 if ( defined $help ) {
     print $usage;
@@ -207,7 +212,11 @@ if (!$have_ipv6) {
   $family = "inet";
 }
 if ( $overwrite ) {
-    $ENV{ "MOSH_PREDICTION_OVERWRITE" } = "yes";
+  $ENV{ "MOSH_PREDICTION_OVERWRITE" } = "yes";
+}
+
+if ( defined $client_network_timeout and $client_network_timeout <= 0 ) {
+  die "$0: --client-network-timeout must be a positive integer number of seconds.\n";
 }
 
 if ( defined $port_request ) {
@@ -461,6 +470,9 @@ if ( $pid == 0 ) { # child
   # Now start real mosh client
   $ENV{ 'MOSH_KEY' } = $key;
   $ENV{ 'MOSH_PREDICTION_DISPLAY' } = $predict;
+  if ( defined $client_network_timeout ) {
+    $ENV{ 'MOSH_CLIENT_NETWORK_TMOUT' } = $client_network_timeout;
+  }
   $ENV{ 'MOSH_NO_TERM_INIT' } = '1' if !$term_init;
   exec {$client} ("$client", "-# @cmdline |", $ip, $port);
 }
