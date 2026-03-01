@@ -134,7 +134,7 @@ qq{Usage: $0 [options] [--] [user@]host [command...]
 Please report bugs to mosh-devel\@mit.edu.
 Mosh home page: https://mosh.org\n};
 
-my $version_message = '@PACKAGE_STRING@ [build @VERSION@]' . qq{
+my $version_message = '@PACKAGE_STRING@ [build @VERSION@, commit @GIT_COMMIT@]' . qq{
 Copyright 2012 Keith Winstein <mosh-devel\@mit.edu>
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
 This is free software: you are free to change and redistribute it.
