@@ -1,0 +1,70 @@
+#!/bin/sh
+
+#
+# Regression test: SGR faint/dim (ESC[2m) must survive mosh rendering.
+# This catches cases where mosh drops faint while explicit gray colors still work.
+#
+
+# shellcheck source=e2e-test-subrs
+. "$(dirname "$0")/e2e-test-subrs"
+PATH=$PATH:.:$srcdir
+
+# Top-level wrapper.
+if [ $# -eq 0 ]; then
+    e2e-test "$0" baseline direct post
+    exit
+fi
+
+# OK, we have arguments, we're one of the test hooks.
+if [ $# -ne 1 ]; then
+    fail "bad arguments %s\n" "$@"
+fi
+
+baseline()
+{
+    printf '\033[2mexplain this codebase\033[0m\n'
+    printf '\033[38;5;244mexplain this codebase\033[0m\n'
+}
+
+post()
+{
+    export LANG=C
+    export LC_ALL=C
+
+    esc=$(printf '\033')
+    cap_base="$(basename "$0").d/baseline.capture"
+    cap_direct="$(basename "$0").d/direct.capture"
+
+    # Accept normalized SGR forms like "0;2" and "0;38;5;244".
+    re_faint="${esc}\\[(0;)?2mexplain this codebase"
+    re_gray="${esc}\\[(0;)?38;5;244mexplain this codebase"
+
+    # Sanity: direct path should preserve both attribute forms.
+    if ! grep -Eq "$re_faint" "$cap_direct"; then
+        exit 99
+    fi
+    if ! grep -Eq "$re_gray" "$cap_direct"; then
+        exit 99
+    fi
+
+    # Regression condition: mosh path must keep faint sequence.
+    if ! grep -Eq "$re_faint" "$cap_base"; then
+        exit 1
+    fi
+
+    # Explicit gray should continue to work through mosh.
+    if ! grep -Eq "$re_gray" "$cap_base"; then
+        exit 99
+    fi
+
+    exit 0
+}
+
+case $1 in
+    baseline|direct)
+        baseline;;
+    post)
+        post;;
+    *)
+        fail "unknown test argument %s\n" "$1";;
+esac
