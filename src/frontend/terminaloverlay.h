@@ -344,7 +344,7 @@ public:
 
   OverlayManager() : notifications(), predictions(), title() {}
 
-  int wait_time( void ) const { return std::min( notifications.wait_time(), predictions.wait_time() ); }
+  int wait_time( void ) const { return notifications.wait_time(); }
 };
 }
 

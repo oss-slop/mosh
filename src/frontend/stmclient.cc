@@ -301,10 +301,6 @@ void STMClient::process_network_input( void )
   overlays.get_notification_engine().server_heard( network->get_latest_remote_state().timestamp );
   overlays.get_notification_engine().server_acked( network->get_sent_state_acked_timestamp() );
 
-  overlays.get_prediction_engine().set_local_frame_acked( network->get_sent_state_acked() );
-  overlays.get_prediction_engine().set_send_interval( network->send_interval() );
-  overlays.get_prediction_engine().set_local_frame_late_acked(
-    network->get_latest_remote_state().state.get_echo_ack() );
 }
 
 bool STMClient::process_user_input( int fd )
@@ -326,20 +322,8 @@ bool STMClient::process_user_input( int fd )
   if ( net.shutdown_in_progress() ) {
     return true;
   }
-  overlays.get_prediction_engine().set_local_frame_sent( net.get_sent_state_last() );
-
-  /* Don't predict for bulk data. */
-  bool paste = bytes_read > 100;
-  if ( paste ) {
-    overlays.get_prediction_engine().reset();
-  }
-
   for ( int i = 0; i < bytes_read; i++ ) {
     char the_byte = buf[i];
-
-    if ( !paste ) {
-      overlays.get_prediction_engine().new_user_byte( the_byte, local_framebuffer );
-    }
 
     if ( quit_sequence_started ) {
       if ( the_byte == '.' ) { /* Quit sequence is Ctrl-^ . */
@@ -423,9 +407,6 @@ bool STMClient::process_resize( void )
   }
 
   /* note remote emulator will probably reply with its own Resize to adjust our state */
-
-  /* tell prediction engine */
-  overlays.get_prediction_engine().reset();
 
   return true;
 }

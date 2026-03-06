@@ -343,8 +343,7 @@ int NotificationEngine::wait_time( void ) const
 
 void OverlayManager::apply( Framebuffer& fb )
 {
-  predictions.cull( fb );
-  predictions.apply( fb );
+  /* Prediction overlays intentionally disabled in no-client-rendering mode. */
   notifications.adjust_message();
   notifications.apply( fb );
   title.apply( fb );
